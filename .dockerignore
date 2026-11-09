@@ -1,0 +1,13 @@
+# Files that are never sent to a container build (works for Podman too).
+.git
+.github
+.vscode
+docs
+tests
+_scaffold
+**/bin
+**/obj
+**/node_modules
+**/.next
+**/.env
+**/.env.*

@@ -1,0 +1,32 @@
+# Weekly dependency update pull requests (OPS-C07). They target preview.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: preview
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: nuget
+    directories:
+      - /src/api
+      - /tests/Api.UnitTests
+      - /tests/Api.IntegrationTests
+    target-branch: preview
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /src/web
+    target-branch: preview
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      include: scope

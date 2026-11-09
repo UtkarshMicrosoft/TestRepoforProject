@@ -1,0 +1,19 @@
+# API image: multi-stage build (full SDK to build, small ASP.NET runtime to run).
+# Build from the repository root:
+#   podman build -f infra/Dockerfile.api -t buildingops-api .
+# Later (OPS-C04): consider a chiseled runtime image and a health check.
+
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY src/api/Api.csproj src/api/
+RUN dotnet restore src/api/Api.csproj
+COPY src/api/ src/api/
+RUN dotnet publish src/api/Api.csproj --configuration Release --no-restore --output /app/publish
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish .
+# Run as the built-in non-root user of the .NET images
+USER $APP_UID
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "Api.dll"]

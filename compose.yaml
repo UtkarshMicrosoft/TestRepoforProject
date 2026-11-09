@@ -1,0 +1,64 @@
+# Local stack for the Building Operations Platform.
+#   Database and cache only:  podman compose up -d db cache
+#   Whole stack:              podman compose up --build
+#   Stop:                     podman compose down    (add -v to delete the database data)
+# Values come from the .env file. Create it first:  Copy-Item .env.example .env
+#
+# Later (OPS-C04): add image tags so any published version starts with one command,
+# for example  RELEASE_TAG=0.3.0 podman compose up
+
+name: buildingops
+
+services:
+  db:
+    image: docker.io/library/postgres:18
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18+ images keep data under /var/lib/postgresql (not /var/lib/postgresql/data)
+      - dbdata:/var/lib/postgresql
+    healthcheck:
+      # -h 127.0.0.1 so the check only passes once the real server accepts TCP connections
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  cache:
+    image: docker.io/valkey/valkey:8
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}"
+      ConnectionStrings__Cache: "cache:6379"
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.web
+    environment:
+      API_BASE_URL: "http://api:8080"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  dbdata:

@@ -1,0 +1,67 @@
+# Continuous integration: runs on every pull request into preview or main.
+# After the first run, mark the jobs "api", "web" and "containers" as required
+# status checks in the branch rulesets (Settings > Rules > Rulesets).
+# Still to add by the OPS track: migration check on a fresh PostgreSQL,
+# secret scanning (Gitleaks), image scanning, publishing images.
+
+name: ci
+
+on:
+  pull_request:
+    branches: [preview, main]
+  push:
+    branches: [preview, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: api
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore BuildingOps.slnx
+      - name: Build
+        run: dotnet build BuildingOps.slnx --configuration Release --no-restore
+      - name: Test
+        run: dotnet test BuildingOps.slnx --configuration Release --no-build
+
+  web:
+    name: web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: src/web/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+
+  containers:
+    name: containers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build API image
+        run: docker build --file infra/Dockerfile.api --tag buildingops-api:ci .
+      - name: Build web image
+        run: docker build --file infra/Dockerfile.web --tag buildingops-web:ci .

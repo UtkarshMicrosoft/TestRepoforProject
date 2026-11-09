@@ -1,0 +1,30 @@
+# Web image: multi-stage build of the Next.js app in "standalone" mode.
+# Requires  output: "standalone"  in src/web/next.config.ts.
+# Build from the repository root:
+#   podman build -f infra/Dockerfile.web -t buildingops-web .
+
+FROM docker.io/library/node:26-alpine AS deps
+WORKDIR /app
+COPY src/web/package.json src/web/package-lock.json ./
+RUN npm ci
+
+FROM docker.io/library/node:26-alpine AS build
+WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY src/web/ ./
+RUN npm run build
+
+FROM docker.io/library/node:26-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
+COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/.next/standalone ./
+COPY --from=build --chown=node:node /app/.next/static ./.next/static
+# Run as the built-in non-root "node" user
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]

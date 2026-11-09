@@ -1,0 +1,17 @@
+# CODEOWNERS: who is asked to review changes to each part of the repository.
+# 1. Replace the @placeholders with your teammates' GitHub usernames.
+# 2. Remove the "# " at the start of each line you want to activate.
+# The last matching line wins.
+
+# *                                     @team-member-1 @team-member-2
+# /src/web/                             @frontend-owner
+# /tests/web/                           @frontend-owner
+# /tests/e2e/                           @frontend-owner
+# /src/api/                             @backend-owner
+# /tests/Api.UnitTests/                 @backend-owner
+# /tests/Api.IntegrationTests/          @backend-owner
+# /src/db/                              @db-owner
+# /tests/db/                            @db-owner
+# /.github/                             @ops-owner
+# /infra/                               @ops-owner
+# /compose.yaml                         @ops-owner
